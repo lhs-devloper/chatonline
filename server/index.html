@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="msapplication-TileColor" content="#ffffff" />
+    <meta name="msapplication-TileImage" content="/img/ms-icon-144x144.png" />
+    <title>Socket.IO chat</title>
+    <link rel="apple-touch-icon" sizes="57x57" href="/img/apple-icon-57x57.png" />
+    <link rel="apple-touch-icon" sizes="60x60" href="/img/apple-icon-60x60.png" />
+    <link rel="apple-touch-icon" sizes="72x72" href="/img/apple-icon-72x72.png" />
+    <link rel="apple-touch-icon" sizes="76x76" href="/img/apple-icon-76x76.png" />
+    <link rel="apple-touch-icon" sizes="114x114" href="/img/apple-icon-114x114.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/img/apple-icon-120x120.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/img/apple-icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/img/apple-icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-icon-180x180.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/android-icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" />
+    <link rel="manifest" href="/img/manifest.json" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+    <!-- <button onclick="askNoti()">Safari알림</button> -->
+    <!-- 햄버거 버튼 -->
+    <button id="hamburgerBtn">&#9776;</button>
+
+    <!-- 참가자 리스트 패널 -->
+    <div id="participantsPanel">
+        <h3>참가자 목록</h3>
+        <ul id="participantsList"></ul>
+        <h3>알림 조정</h3>
+        <input type="number" min="500" max="10000" step="100" value="500" id="alarmInterval" />
+        <button type="button" onclick="saveInterval()">알림확인시간조정</button>
+        <button type="button" id="requestNotificationBtn" style="display: none">
+            알림 허용
+        </button>
+    </div>
+    <ul id="messages"></ul>
+    <button id="scrollToBottomBtn" class="scroll-to-bottom-btn">
+        &#x2193;
+    </button>
+    <form id="form" action="">
+        <div id="input" contenteditable="true" autocomplete="off"></div>
+        <button>Send</button>
+    </form>
+    <script src="https://lhs-devloper.com/socket.io/socket.io.js"></script>
+    <script src="/js/main.js"></script>
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modalImage" />
+    </div>
+</body>
+
+</html>

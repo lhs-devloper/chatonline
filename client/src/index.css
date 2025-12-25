@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pastel-blue: #A7C7E7;
+  --color-pastel-dark-blue: #89CFF0;
+  --color-pastel-bg: #F0F8FF;
+  --color-pastel-chat-me: #A7C7E7;
+  --color-pastel-chat-other: #FFFFFF;
+}
+
+body {
+  background-color: #F0F8FF;
+  /* pastel.bg */
+}
+
+/* Mobile-first container */
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 480px;
+  /* Mobile width on PC */
+  height: 100%;
+  background-color: white;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
