@@ -1,8 +1,10 @@
 import { io } from 'socket.io-client';
 
-const URL = 'http://localhost:3000';
+//const URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+const URL = "https://lhs-devloper.com";
 
 export const socket = io(URL, {
+    path: "/socket.io",
     autoConnect: false,
     // Reconnection settings
     reconnection: true,              // 자동 재연결 활성화
@@ -15,6 +17,6 @@ export const socket = io(URL, {
     timeout: 20000,                  // 연결 타임아웃 (20초)
 
     // Transport settings
-    transports: ['websocket', 'polling'], // WebSocket 우선, 실패 시 polling
-    upgrade: true,                   // polling에서 websocket으로 업그레이드 허용
+    transports: ['websocket'], // WebSocket 우선, 실패 시 polling
+    upgrade: false,                   // polling에서 websocket으로 업그레이드 허용
 });

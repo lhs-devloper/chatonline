@@ -5,15 +5,25 @@ import cors from "cors";
 import path from "path";
 import dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config({
+    path: path.resolve(process.cwd(), '../.env'),
+});
 
 const app = express();
 const httpServer = createServer(app);
+
+// CORS configuration based on environment
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:5173', 'http://localhost:3000'];
+console.log(allowedOrigins);
+console.log(process.env.NODE_ENV)
 const io = new Server(httpServer, {
     maxHttpBufferSize: 50e6, // 50 MB
     cors: {
-        origin: "*", // Allow all for dev, restrict in prod
-        methods: ["GET", "POST"]
+        origin: process.env.NODE_ENV === 'production' ? allowedOrigins : "*",
+        methods: ["GET", "POST"],
+        credentials: true
     },
     // Ping/Pong settings (heartbeat) - 서버 측
     pingTimeout: 60000,      // 60초 - 클라이언트 응답 대기 시간
@@ -136,3 +146,4 @@ const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
