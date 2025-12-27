@@ -54,8 +54,24 @@ export class RoomService {
         }
     }
 
+    // Get single room
+    static async getRoom(roomId: string): Promise<Room | null> {
+        if (!isFirebaseInitialized) {
+            return inMemoryRooms.get(roomId) || null;
+        }
+
+        try {
+            const doc = await db.collection(COLLECTION_NAME).doc(roomId).get();
+            if (!doc.exists) return null;
+            return doc.data() as Room;
+        } catch (error) {
+            console.warn("Firebase error (getRoom), using in-memory storage:", error);
+            return inMemoryRooms.get(roomId) || null;
+        }
+    }
+
     // Join room
-    static async joinRoom(roomId: string, userId: string, password?: string): Promise<{ success: boolean, message?: string }> {
+    static async joinRoom(roomId: string, userId: string, password?: string): Promise<{ success: boolean, message?: string, roomName?: string }> {
         if (!isFirebaseInitialized) {
             console.log('📝 Using in-memory storage (Firebase not configured)');
             const room = inMemoryRooms.get(roomId);
@@ -73,7 +89,7 @@ export class RoomService {
                 room.users.push(userId);
                 inMemoryRooms.set(roomId, room);
             }
-            return { success: true };
+            return { success: true, roomName: room.roomName };
         }
 
         try {
@@ -94,7 +110,7 @@ export class RoomService {
                     users: [...room.users, userId]
                 });
             }
-            return { success: true };
+            return { success: true, roomName: room.roomName };
 
         } catch (error) {
             console.error("Error joining room:", error);

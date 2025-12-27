@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 dotenv.config({
-    path: path.resolve(process.cwd(), '../.env'),
+    path: path.resolve(process.cwd(), '.env'),
 });
 
 let firebaseInitialized = false;
@@ -51,7 +51,7 @@ if (!admin.apps.length) {
                     const serviceAccount = require(filePath);
                     admin.initializeApp({
                         credential: admin.credential.cert(serviceAccount),
-			databaseURL: process.env.FIREBASE_DATABASE_URL
+                        databaseURL: process.env.FIREBASE_DATABASE_URL
                     });
                     console.log(`✅ Firebase Admin initialized with file: ${filePath}`);
                     firebaseInitialized = true;

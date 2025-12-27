@@ -47,6 +47,8 @@ app.get("/", (req, res) => {
 
 // In-memory user mapping: socketId -> User
 const connectedUsers = new Map<string, { username: string, currentRoomId?: string }>();
+// Persistence for user state by username (persists across reconnections)
+const userStates = new Map<string, { currentRoomId?: string }>();
 
 import { RoomService } from './service/RoomService';
 import { ChatService } from './service/ChatService';
@@ -58,13 +60,49 @@ interface ChatSocket extends Socket {
 
 io.on("connection", (socket: Socket) => {
     const chatSocket = socket as ChatSocket;
-    console.log("User connected:", socket.id);
+
+    // Helper to broadcast room member list
+    const broadcastRoomUsers = (roomId: string) => {
+        const roomUsers = Array.from(connectedUsers.values())
+            .filter(u => u.currentRoomId === roomId)
+            .map(u => u.username);
+
+        // Deduplicate in case same user has multiple sockets
+        const uniqueRoomUsers = Array.from(new Set(roomUsers));
+        io.to(roomId).emit("roomUserList", uniqueRoomUsers);
+    };
 
     // 1. Join Global/Lobby or Login
-    chatSocket.on("login", (username: string) => {
+    chatSocket.on("login", async (username: string, roomId?: string) => {
         chatSocket.username = username;
-        connectedUsers.set(socket.id, { username });
-        io.emit("userList", Array.from(connectedUsers.values()).map(u => u.username));
+
+        // Restore state: 1. From client (Restoration) 2. From persistent memory
+        const restoredRoomId = roomId || userStates.get(username)?.currentRoomId;
+
+        if (restoredRoomId) {
+            chatSocket.currentRoomId = restoredRoomId;
+            socket.join(restoredRoomId);
+            userStates.set(username, { currentRoomId: restoredRoomId });
+
+            // Restore chat room UI state and history
+            const room = await RoomService.getRoom(restoredRoomId);
+            if (room) {
+                socket.emit("joinRoomSuccess", { roomId: restoredRoomId, roomName: room.roomName });
+                const history = await ChatService.getMessages(restoredRoomId);
+                socket.emit("chatHistory", history);
+            }
+        }
+
+        connectedUsers.set(socket.id, {
+            username,
+            currentRoomId: chatSocket.currentRoomId
+        });
+
+        io.emit("userList", Array.from(new Set(Array.from(connectedUsers.values()).map(u => u.username))));
+
+        if (chatSocket.currentRoomId) {
+            broadcastRoomUsers(chatSocket.currentRoomId);
+        }
     });
 
     // 2. Get Rooms
@@ -89,26 +127,45 @@ io.on("connection", (socket: Socket) => {
             // Leave previous room
             if (chatSocket.currentRoomId) {
                 socket.leave(chatSocket.currentRoomId);
+                const oldRoomId = chatSocket.currentRoomId;
+                // No need to broadcast here yet, we'll do it after updating state
             }
 
             // Join new room
             socket.join(data.roomId);
             chatSocket.currentRoomId = data.roomId;
 
-            // Update user state
-            const user = connectedUsers.get(socket.id);
-            if (user) user.currentRoomId = data.roomId;
+            // Update persistent state and current session state
+            userStates.set(chatSocket.username, { currentRoomId: data.roomId });
+            connectedUsers.set(socket.id, { username: chatSocket.username, currentRoomId: data.roomId });
 
             // Send success and history
-            socket.emit("joinRoomSuccess", { roomId: data.roomId });
+            socket.emit("joinRoomSuccess", { roomId: data.roomId, roomName: result.roomName });
             const history = await ChatService.getMessages(data.roomId);
             socket.emit("chatHistory", history);
 
             // Notify room
-            io.to(data.roomId).emit("systemMessage", `${chatSocket.username} joined the room.`);
+            io.to(data.roomId).emit("systemMessage", `${chatSocket.username}님이 입장하셨습니다.`);
+
+            broadcastRoomUsers(data.roomId);
         } else {
             socket.emit("joinRoomError", { message: result.message });
         }
+    });
+
+    // 4.5 Leave Room
+    chatSocket.on("leaveRoom", (data: { roomId: string }) => {
+        socket.leave(data.roomId);
+        chatSocket.currentRoomId = undefined;
+
+        if (chatSocket.username) {
+            userStates.set(chatSocket.username, { currentRoomId: undefined });
+            connectedUsers.set(socket.id, { username: chatSocket.username, currentRoomId: undefined });
+        }
+
+        // Notify room
+        io.to(data.roomId).emit("systemMessage", `${chatSocket.username}님이 퇴장하셨습니다.`);
+        broadcastRoomUsers(data.roomId);
     });
 
     // 5. Send Message
@@ -132,8 +189,15 @@ io.on("connection", (socket: Socket) => {
 
     socket.on("disconnect", () => {
         if (chatSocket.username) {
+            const roomId = chatSocket.currentRoomId;
             connectedUsers.delete(socket.id);
-            io.emit("userList", Array.from(connectedUsers.values()).map(u => u.username));
+
+            io.emit("userList", Array.from(new Set(Array.from(connectedUsers.values()).map(u => u.username))));
+
+            if (roomId) {
+                broadcastRoomUsers(roomId);
+                io.to(roomId).emit("systemMessage", `${chatSocket.username}님의 연결이 끊어졌습니다.`);
+            }
         }
     });
 });

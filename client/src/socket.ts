@@ -1,10 +1,10 @@
 import { io } from 'socket.io-client';
 
-//const URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
-const URL = "https://lhs-devloper.com";
+const URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+// const URL = "https://lhs-devloper.com";
 
 export const socket = io(URL, {
-    path: "/socket.io",
+    // path: "/socket.io",  
     autoConnect: false,
     // Reconnection settings
     reconnection: true,              // 자동 재연결 활성화

@@ -66,7 +66,7 @@ export default function RoomList({ username }: Props) {
     return (
         <div className="flex flex-col h-full bg-white">
             <header className="p-4 bg-pastel-blue text-black flex justify-between items-center shadow-sm">
-                <h2 className="text-xl font-bold">Rooms</h2>
+                <h2 className="text-xl font-bold">채팅방 목록</h2>
                 <span className="text-sm opacity-80">{username}</span>
             </header>
 
@@ -76,7 +76,7 @@ export default function RoomList({ username }: Props) {
                         onClick={() => joinRoom(room)}
                         className="p-4 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-blue-50 transition flex justify-between items-center">
                         <span className="font-medium text-gray-700">{room.roomName}</span>
-                        {room.password && <span className="text-xs text-gray-400">🔒 Private</span>}
+                        {room.password && <span className="text-xs text-gray-400">🔒 비공개</span>}
                     </div>
                 ))}
             </div>

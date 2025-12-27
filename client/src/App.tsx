@@ -5,55 +5,87 @@ import RoomList from './components/RoomList';
 import ChatRoom from './components/ChatRoom';
 
 function App() {
-  const [username, setUsername] = useState('');
-  const [currentRoom, setCurrentRoom] = useState('');
-  const [view, setView] = useState<'login' | 'rooms' | 'chat'>('login');
+  const [username, setUsername] = useState(() => localStorage.getItem('chat_username') || '');
+  const [currentRoom, setCurrentRoom] = useState(() => localStorage.getItem('chat_currentRoom') || '');
+  const [currentRoomName, setCurrentRoomName] = useState(() => localStorage.getItem('chat_currentRoomName') || '');
+
+  const [view, setView] = useState<'login' | 'rooms' | 'chat'>(() => {
+    const savedUser = localStorage.getItem('chat_username');
+    const savedRoom = localStorage.getItem('chat_currentRoom');
+    if (savedUser && savedRoom) return 'chat';
+    if (savedUser) return 'rooms';
+    return 'login';
+  });
+
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('disconnected');
+
+  // Persistence Sync
+  useEffect(() => {
+    localStorage.setItem('chat_username', username);
+    localStorage.setItem('chat_currentRoom', currentRoom);
+    localStorage.setItem('chat_currentRoomName', currentRoomName);
+  }, [username, currentRoom, currentRoomName]);
 
   useEffect(() => {
     socket.connect();
-
-    // Connection monitoring
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
-      setConnectionStatus('connected');
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
-      setConnectionStatus('disconnected');
-    });
-
-    socket.on('reconnect_attempt', (attemptNumber) => {
-      console.log('Reconnection attempt:', attemptNumber);
-      setConnectionStatus('reconnecting');
-    });
-
-    socket.on('reconnect_failed', () => {
-      console.log('Reconnection failed');
-      setConnectionStatus('disconnected');
-    });
-
-    socket.on('reconnect', (attemptNumber) => {
-      console.log('Reconnected after', attemptNumber, 'attempts');
-      setConnectionStatus('connected');
-    });
-
-    socket.on('joinRoomSuccess', ({ roomId }: { roomId: string }) => {
-      setCurrentRoom(roomId);
-      setView('chat');
-    });
-
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('reconnect_attempt');
-      socket.off('reconnect_failed');
-      socket.off('reconnect');
-      socket.off('joinRoomSuccess');
       socket.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    const onConnect = () => {
+      console.log('Socket connected:', socket.id);
+      setConnectionStatus('connected');
+      if (username) {
+        // Send both username AND currentRoom to restore session correctly
+        // Use currentRoom from state (which might be from localStorage)
+        socket.emit('login', username, currentRoom);
+      }
+    };
+
+    const onDisconnect = (reason: string) => {
+      console.log('Socket disconnected:', reason);
+      setConnectionStatus('disconnected');
+    };
+
+    const onReconnectAttempt = (attemptNumber: number) => {
+      console.log('Reconnection attempt:', attemptNumber);
+      setConnectionStatus('reconnecting');
+    };
+
+    const onReconnectFailed = () => {
+      console.log('Reconnection failed');
+      setConnectionStatus('disconnected');
+    };
+
+    const onReconnect = (attemptNumber: number) => {
+      console.log('Reconnected after', attemptNumber, 'attempts');
+      setConnectionStatus('connected');
+    };
+
+    const onJoinRoomSuccess = ({ roomId, roomName }: { roomId: string, roomName: string }) => {
+      setCurrentRoom(roomId);
+      setCurrentRoomName(roomName);
+      setView('chat');
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('reconnect_attempt', onReconnectAttempt);
+    socket.on('reconnect_failed', onReconnectFailed);
+    socket.on('reconnect', onReconnect);
+    socket.on('joinRoomSuccess', onJoinRoomSuccess);
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('reconnect_attempt', onReconnectAttempt);
+      socket.off('reconnect_failed', onReconnectFailed);
+      socket.off('reconnect', onReconnect);
+      socket.off('joinRoomSuccess', onJoinRoomSuccess);
+    };
+  }, [username]);
 
   const handleLogin = (user: string) => {
     setUsername(user);
@@ -77,6 +109,12 @@ function App() {
     }
   };
 
+  const handleLeaveRoom = () => {
+    setCurrentRoom('');
+    setCurrentRoomName('');
+    setView('rooms');
+  };
+
   return (
     <div className="app-container">
       {/* Connection Status Indicator */}
@@ -89,7 +127,7 @@ function App() {
 
       {view === 'login' && <Login onLogin={handleLogin} />}
       {view === 'rooms' && <RoomList username={username} />}
-      {view === 'chat' && <ChatRoom roomId={currentRoom} username={username} onLeave={() => setView('rooms')} />}
+      {view === 'chat' && <ChatRoom roomId={currentRoom} roomName={currentRoomName} username={username} onLeave={handleLeaveRoom} />}
     </div>
   );
 }

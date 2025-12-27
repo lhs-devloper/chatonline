@@ -51,13 +51,25 @@ export class ChatService {
                 .limit(limit)
                 .get();
 
-            return snapshot.docs.map((doc: any) => {
+            const firestoreMessages = snapshot.docs.map((doc: any) => {
                 const data = doc.data();
                 return {
                     ...data,
-                    timestamp: data.timestamp.toDate() // Convert Firestore Timestamp to Date
+                    timestamp: data.timestamp.toDate()
                 } as Chat;
-            }).reverse(); // Return in chronological order
+            });
+
+            // Combine with in-memory messages that might not be in Firestore yet
+            const memoryMessages = inMemoryMessages.get(roomId) || [];
+
+            // Deduplicate by chatId (assuming chatId is unique)
+            const combined = [...firestoreMessages, ...memoryMessages];
+            const uniqueMessages = Array.from(new Map(combined.map(m => [m.chatId, m])).values());
+
+            // Return sorted by timestamp
+            return uniqueMessages
+                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                .slice(-limit);
         } catch (error) {
             console.warn("Firebase error (getMessages), using in-memory storage:", error);
             const roomMessages = inMemoryMessages.get(roomId) || [];
